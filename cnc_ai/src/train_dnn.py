@@ -33,9 +33,7 @@ DROPOUT      = 0.4
 torch.manual_seed(RANDOM_STATE)
 np.random.seed(RANDOM_STATE)
 
-# RTX 5060 Blackwell은 PyTorch 2.3.0 CUDA 커널 미지원 → CPU 사용
-# 25샘플이라 CPU로도 수초 내 완료
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 
 

@@ -107,15 +107,15 @@ XGB_PARAMS = dict(
 - `EarlyStopping(patience=30)`: val_loss 기준 최적 epoch 복원. 고정 300 epoch에서 과적합 구간 제거 → 성능 향상
 
 **학습 환경:**
-- GPU(RTX 5060 Blackwell)는 PyTorch 2.3.0에서 CUDA 커널 미지원 → CPU 학습
-- 25샘플이므로 CPU full-batch 학습으로도 수초 내 완료
+- GPU(RTX 5060 Blackwell, sm_120) / PyTorch 2.6 + CUDA 12.8 (Blackwell 지원 버전)
+- Full-batch 학습 (25샘플) → GPU 메모리 점유 미미, 수초 내 완료
 
 ### DNN OOF 결과
 
 | Task | Recall | Precision | F1 | AUC |
 |--|--|--|--|--|
-| Task A (가공불량) | **0.750** | 0.818 | **0.783** | **0.913** |
-| Task B (공구마모) | 0.500 | 0.700 | 0.583 | 0.591 |
+| Task A (가공불량) | **0.750** | 0.818 | **0.783** | **0.950** |
+| Task B (공구마모) | 0.643 | 0.643 | 0.643 | 0.767 |
 
 > EarlyStopping 추가 전 Task A: Recall=0.667 / F1=0.727 / AUC=0.830 → 추가 후 전 지표 향상
 
@@ -134,10 +134,10 @@ XGB_PARAMS = dict(
 |--|--|--|--|--|
 | Task A | Recall | **0.750** | **0.750** | 동률 |
 | Task A | F1 | 0.750 | **0.783** | DNN |
-| Task A | AUC | 0.779 | **0.913** | DNN |
-| Task B | Recall | **0.571** | 0.500 | XGBoost |
-| Task B | F1 | **0.615** | 0.583 | XGBoost |
-| Task B | AUC | 0.558 | **0.591** | DNN |
+| Task A | AUC | 0.779 | **0.950** | DNN |
+| Task B | Recall | 0.571 | **0.643** | DNN |
+| Task B | F1 | 0.615 | **0.643** | DNN |
+| Task B | AUC | 0.558 | **0.767** | DNN |
 
 ![성능 비교 바 차트](figures/20_model_comparison_bar.png)
 
@@ -243,7 +243,7 @@ Task B는 어떤 단일 피처도 SHAP 값이 0.2 미만으로, Task A(0.376)에
 
 | 운영 시나리오 | Task A 권고 | Threshold | Recall | F1 |
 |--|--|--|--|--|
-| 불량 절대 불통과 | **DNN** | 0.33 | **1.000** | 0.857 |
+| 불량 절대 불통과 | **DNN** | 0.40 | **0.917** | 0.846 |
 | 균형 운영 | **XGBoost** | 0.48 | 0.833 | 0.800 |
 | 경량/해석 우선 | **XGBoost** | 0.50 | 0.750 | 0.750 |
 
@@ -256,7 +256,7 @@ Task B는 어떤 단일 피처도 SHAP 값이 0.2 미만으로, Task A(0.376)에
 1. **Task A: threshold 조정으로 Recall 추가 향상 가능 (섹션 9 참조)**
    - threshold=0.50(기본): Recall=0.750, 불량 4건 중 1건 놓침
    - threshold=0.48(XGBoost): Recall=0.833, 불량 6건 중 1건으로 개선
-   - threshold=0.33(DNN): Recall=1.000, 불량 전수 탐지 (FP 4건 발생)
+   - threshold=0.40(DNN): Recall=0.917, 불량 12건 중 11건 탐지 (FP 3건 발생)
    - 현장 허용 FP 비용과 미탐지 불량 비용을 비교해 threshold 결정 필요
 
 2. **Task B Recall 0.571은 현장 적용하기 어려운 수준**
@@ -276,10 +276,10 @@ Task B는 어떤 단일 피처도 SHAP 값이 0.2 미만으로, Task A(0.376)에
    - SHAP으로 개별 예측 이유 설명 → 작업자 신뢰 확보 가능
    - 추가 라이브러리/GPU 불필요
 
-   **DNN + threshold=0.33** (불량 절대 불통과 운영):
-   - Task A Recall=1.000 달성 가능
+   **DNN + threshold=0.40** (불량 절대 불통과 운영):
+   - Task A Recall=0.917 달성 가능 (12건 중 11건 탐지)
    - PyTorch 런타임 필요, 모델 파일 더 큼
-   - FP 4건(오탐 25%) 감수 필요
+   - FP 3건(오탐 21%) 감수 필요
    - 추론 시 StandardScaler 스케일러 파라미터도 함께 로드해야 함 (`dnn_task_a.pt` 내 포함)
 
 ---
@@ -312,11 +312,11 @@ threshold를 0.50 → 0.48로 단 2포인트만 낮춰도 Recall 0.750 → 0.833
 | Threshold | Recall | Precision | F1 | 비고 |
 |--|--|--|--|--|
 | 0.50 (기존) | 0.750 | 0.818 | 0.783 | 기본값 |
-| **0.33** | **1.000** | 0.750 | **0.857** | 불량 전수 탐지 |
+| **0.40** | **0.917** | 0.786 | **0.846** | Recall ≥ 0.85 조건 최적 |
 
-DNN AUC=0.913이 XGBoost(0.779)보다 높은 덕분에, threshold=0.33에서 Recall=1.000(불량 12개 전부 탐지)이면서 F1=0.857을 달성한다. FP는 4개(양품 13개 중 4개 오판).
+DNN AUC=0.950이 XGBoost(0.779)보다 높아 확률 분리 능력이 우수하다. threshold=0.40에서 Recall=0.917(불량 12개 중 11개 탐지), F1=0.846을 달성한다. FP는 3개(양품 13개 중 3개 오판).
 
-**이 결과의 의미:** "불량을 하나도 놓치지 않는다"는 조건이 현장 요구사항이라면, DNN + threshold=0.33이 현재 가능한 최선의 조합이다. Precision 0.750은 알람 발생의 25%가 오탐임을 의미하므로 현장에서 수용 가능한지 별도 확인이 필요하다.
+**이 결과의 의미:** "불량을 거의 놓치지 않는다"는 조건이 현장 요구사항이라면, DNN + threshold=0.40이 현재 가능한 최선의 조합이다. Precision 0.786은 알람 발생의 약 21%가 오탐임을 의미하므로 현장에서 수용 가능한지 별도 확인이 필요하다.
 
 ### Task B XGBoost
 
@@ -328,13 +328,13 @@ DNN AUC=0.913이 XGBoost(0.779)보다 높은 덕분에, threshold=0.33에서 Rec
 | 0.49 | 0.643 | 0.643 | 0.643 | 소폭 향상 |
 | 0.10~0.44 | 1.000 | 0.560 | 0.718 | Recall 최대 |
 
-Task B는 threshold를 낮춰도 Precision이 0.56 수준에 머문다. 확률 분포 자체의 분리가 약해서(AUC=0.558) threshold 조정만으로는 근본적인 성능 향상이 어렵다.
+Task B는 threshold를 낮춰도 Precision이 0.56 수준에 머문다. XGBoost 확률 분포 자체의 분리가 약해서(AUC=0.558) threshold 조정만으로는 근본적인 성능 향상이 어렵다. 단, DNN(AUC=0.767)은 XGBoost 대비 분리 능력이 크게 개선됐으므로 Task B에서도 DNN+threshold 조합이 유리할 수 있다.
 
 ### 운영 threshold 권고
 
 | Task | 모델 | 권고 Threshold | Recall | 적용 조건 |
 |--|--|--|--|--|
-| Task A | DNN | **0.33** | 1.000 | 불량 유출이 절대 불가한 경우 |
+| Task A | DNN | **0.40** | 0.917 | 불량 유출 최소화 우선 |
 | Task A | XGBoost | **0.48** | 0.833 | 균형 운영 |
 | Task A | XGBoost | 0.50 | 0.750 | 경량·해석 우선 |
 | Task B | XGBoost | 0.49 | 0.643 | 소폭 개선 원할 때 |

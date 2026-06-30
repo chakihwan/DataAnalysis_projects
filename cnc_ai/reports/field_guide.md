@@ -15,12 +15,12 @@
 | **판단 내용** | 이 가공품이 불량인가? | 이 공구가 마모됐는가? |
 | **입력** | 가공 중 수집된 센서 시계열 | 동일 |
 | **출력** | 양품(0) / 불량(1) | unworn(0) / worn(1) |
-| **권고 모델** | XGBoost (일반) / DNN+threshold=0.33 (불량 절대 불통과) | XGBoost |
-| **핵심 성능** | Recall 0.750 (XGBoost) / Recall 1.000 (DNN, th=0.33) | Recall 0.571 |
+| **권고 모델** | XGBoost (일반) / DNN+threshold=0.40 (불량 유출 최소화) | XGBoost |
+| **핵심 성능** | Recall 0.750 (XGBoost) / Recall 0.917 (DNN, th=0.40) | Recall 0.571 |
 
 **현장 언어로 번역하면:**
 - Task A (일반 운영): 불량 10건 중 약 7~8건을 자동으로 걸러냄. 나머지 2~3건은 기존 육안검사 유지 필요
-- Task A (불량 절대 불통과): DNN + threshold=0.33 사용 시 불량 100% 탐지. 단, 양품 중 약 30%를 불량으로 오판(FP)하므로 해당 물량에 대한 2차 검사 공정 필요
+- Task A (불량 유출 최소화): DNN + threshold=0.40 사용 시 불량 12건 중 11건 탐지(Recall=0.917). 양품 중 약 21%를 불량으로 오판(FP)하므로 해당 물량에 대한 2차 검사 공정 필요
 - Task B: 마모 10건 중 약 5~6건 탐지. 신뢰도가 낮아 보조 지표로 활용 권고
 
 ---
@@ -216,9 +216,11 @@ class DefectDNN(nn.Module):
         return self.net(x).squeeze(1)
 
 # 모델 로드 (서버 시작 시 1회)
-ckpt = torch.load("models/dnn_task_a.pt", map_location="cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+ckpt = torch.load("models/dnn_task_a.pt", map_location=device)
 model = DefectDNN(ckpt["input_dim"])
 model.load_state_dict(ckpt["model_state"])
+model.to(device)
 model.eval()
 
 scaler_mean  = ckpt["scaler_mean"]
@@ -227,7 +229,7 @@ scaler_scale = ckpt["scaler_scale"]
 # 가공 완료 후 피처 추출
 feature_vector = extract_features(sensor_data)   # 1행 × 177컬럼 numpy array
 X_scaled = (feature_vector - scaler_mean) / scaler_scale
-X_t = torch.tensor(X_scaled, dtype=torch.float32)
+X_t = torch.tensor(X_scaled, dtype=torch.float32).to(device)
 
 # 불량 확률
 with torch.no_grad():
@@ -235,7 +237,7 @@ with torch.no_grad():
 proba = 1 / (1 + np.exp(-logit))
 
 # 판정 — Recall 1.000 달성 threshold
-THRESHOLD = 0.33
+THRESHOLD = 0.40
 result = "불량(재검사)" if proba >= THRESHOLD else "양품"
 print(f"불량 확률: {proba:.3f} → {result}")
 ```
@@ -247,8 +249,8 @@ print(f"불량 확률: {proba:.3f} → {result}")
 | 모델 | threshold | Recall | Precision | F1 | 적합한 상황 |
 |--|--|--|--|--|--|
 | XGBoost | 0.50 (기본) | 0.750 | 0.750 | 0.750 | 일반 운영, 균형 중시 |
-| XGBoost | 0.35 | 0.917 | 0.647 | 0.759 | Recall 강화 (불량 놓침 최소화) |
-| DNN | 0.33 | 1.000 | 0.750 | 0.857 | 불량 절대 불통과 (전수 재검사 허용) |
+| XGBoost | 0.48 | 0.833 | 0.769 | 0.800 | Recall 강화 (F1 최대) |
+| DNN | 0.40 | 0.917 | 0.786 | 0.846 | 불량 유출 최소화 (오탐 21% 허용) |
 
 ROC Curve (그림 21)와 Threshold 분석 (그림 24~25)를 보고 현장 요구에 맞는 조합을 선택한다.
 
