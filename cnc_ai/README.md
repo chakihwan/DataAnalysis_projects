@@ -12,7 +12,8 @@ KAMP 공개 데이터셋을 활용한 CNC 가공 공정 이상 감지 시스템.
 | **문제** | 가공불량 예측 | 공구마모 분류 |
 | **타겟** | 양품(0) / 불량(1) | unworn(0) / worn(1) |
 | **핵심 지표** | Recall (불량 미통과 최소화) | Recall |
-| **권고 모델** | XGBoost (일반) / DNN+th=0.33 (불량 절대 불통과) | XGBoost |
+| **권고 모델 (균형 운영)** | XGBoost (th=0.50) | XGBoost (th=0.50) |
+| **권고 모델 (불량 유출 최소화)** | DNN (th=0.40, Recall=0.917) | — |
 
 ---
 
@@ -50,8 +51,8 @@ KAMP 공개 데이터셋을 활용한 CNC 가공 공정 이상 감지 시스템.
 
 **DNN vs XGBoost**
 - 샘플 25건 환경에서 XGBoost가 안정적
-- DNN은 EarlyStopping(val_loss, patience=30) 적용 후 AUC Task A 0.830 → 0.913
-- DNN의 높은 AUC를 활용해 threshold=0.33으로 내리면 Task A Recall 1.000 달성
+- DNN은 EarlyStopping(val_loss, patience=30) + GPU 학습으로 AUC Task A 0.830 → 0.950
+- DNN의 높은 AUC를 활용해 threshold=0.40으로 내리면 Task A Recall 0.917 달성
 
 ---
 

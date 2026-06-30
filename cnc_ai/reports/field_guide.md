@@ -195,7 +195,7 @@ result = "불량" if proba >= threshold else "양품"
 print(f"불량 확률: {proba:.3f} → {result}")
 ```
 
-### 추론 코드 예시 — DNN (불량 절대 불통과 시나리오, threshold=0.33)
+### 추론 코드 예시 — DNN (불량 유출 최소화 시나리오, threshold=0.40)
 
 ```python
 import torch
