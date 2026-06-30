@@ -142,7 +142,6 @@ python src/threshold_analysis.py
 
 ## 개발 환경
 
-- Python 3.10
-- PyTorch 2.3.0 (컨테이너 베이스: cuda12.1-cudnn8-runtime)
-- GPU: RTX 5060 Blackwell / CUDA 13.0 — PyTorch 2.3.0 Blackwell 미지원으로 **CPU 학습** (25샘플이라 수초 내 완료)
+- Python 3.11 / PyTorch 2.11.0+cu128 / CUDA 12.8
+- GPU: RTX 5060 Blackwell (sm_120) — GPU 학습
 - XGBoost / SHAP / scikit-learn / pandas / matplotlib
