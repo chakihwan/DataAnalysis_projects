@@ -18,5 +18,5 @@
 docker-compose up -d
 ```
 
-- Python 3.10 / PyTorch 2.3.0 + CUDA 12.1
+- Python 3.10 / PyTorch 2.3.0 (RTX 5060 Blackwell 미지원 → CPU 학습)
 - 상세 패키지: `requirements.txt`
