@@ -1,0 +1,27 @@
+{
+  "name": "DataAnalysis Dev",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/DataAnalysis_projects",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/opt/conda/bin/python",
+        "python.pythonPath": "/opt/conda/bin/python",
+        "jupyter.kernels.filter": [],
+        "editor.formatOnSave": true,
+        "python.terminal.activateEnvironment": false
+      }
+    }
+  },
+
+  "remoteUser": "root"
+}

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# 환경
+.env
+.venv/
+venv/
+*.egg
+
+# Jupyter (사용 금지 - CLAUDE.md 참조)
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE / 도구
+.idea/
+.omc/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
